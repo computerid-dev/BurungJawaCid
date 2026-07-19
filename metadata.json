@@ -1,0 +1,6 @@
+{
+  "name": "Burung Terbang",
+  "description": "Game terbang bertema budaya Jawa dengan motif wayang, batik, dan gapura.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
