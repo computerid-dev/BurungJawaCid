@@ -1,0 +1,66 @@
+name: Build & Sign APK (Auto Keystore)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Buat file .env kosong
+        run: touch .env
+
+      - name: Generate keystore (hanya jika belum ada)
+        run: |
+          if [ ! -f "signing/upload-key.jks" ]; then
+            echo "Keystore belum ada, membuat baru..."
+            mkdir -p signing
+            keytool -genkeypair -v \
+              -keystore signing/upload-key.jks \
+              -alias upload \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "BurungTerbang2026!" \
+              -keypass "BurungTerbang2026!" \
+              -dname "CN=Nugroho YR, OU=ComputerID-GROUP, O=ComputerID-GROUP, L=Jawa, S=Jawa, C=ID"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add signing/upload-key.jks
+            git commit -m "chore: auto-generate signing keystore [skip ci]"
+            git push
+          else
+            echo "Keystore sudah ada, pakai yang lama."
+          fi
+
+      - name: Build APK release (auto sign)
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/signing/upload-key.jks
+          STORE_PASSWORD: "BurungTerbang2026!"
+          KEY_PASSWORD: "BurungTerbang2026!"
+        run: gradle :app:assembleRelease --no-daemon
+
+      - name: Upload APK sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: burung-terbang-apk
+          path: app/build/outputs/apk/release/*.apk
